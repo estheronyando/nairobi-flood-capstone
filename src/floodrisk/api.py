@@ -162,6 +162,11 @@ async def lifespan(app: FastAPI):
         }
     log.info("Service ready")
     yield
+    scorers = STATE.get("scorers", {})
+    if isinstance(scorers, dict):
+        for scorer in scorers.values():
+            if isinstance(scorer, PointScorer):
+                scorer.close()
     STATE.clear()
 
 

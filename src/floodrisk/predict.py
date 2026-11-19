@@ -21,6 +21,7 @@ from pathlib import Path
 import numpy as np
 import rasterio
 from pyproj import Transformer
+from rasterio.windows import Window
 
 from .config import Config
 from .rasters import read_band, write_geotiff
@@ -114,7 +115,10 @@ class PointScorer:
     """Reads predictors at arbitrary coordinates. Used by the API.
 
     Kept separate from :func:`predict_surface` because the service needs
-    single-pixel lookups with the rasters held open, not a full sweep.
+    single-pixel lookups, not a full sweep. Raster datasets are opened lazily
+    and only one cell is read at a time. This is important for the deployed
+    service: loading the full 30 m predictor stack and two 15-event rainfall
+    stacks at startup exceeds the 512 MiB free-hosting limit.
     """
 
     def __init__(self, cfg: Config, model_artefact: dict, scenario: str = "median"):
@@ -123,19 +127,65 @@ class PointScorer:
         self.features = model_artefact["features"]
         self.scenario = scenario
 
-        self.dem, self.dem_ok = read_band(cfg.static_rasters["dem"])
-        self.slope, self.slope_ok = read_band(cfg.static_rasters["slope"])
-        self.builtup, self.built_ok = read_band(cfg.static_rasters["builtup"])
-        self.rain7, self.rain_sum = build_scenario(cfg, scenario)
-        self.perm, _ = read_band(cfg.auxiliary_rasters["perm_water"])
+        self._datasets: dict[Path, rasterio.DatasetReader] = {}
+        self._static_paths = dict(cfg.static_rasters)
+        self._perm_path = cfg.auxiliary_rasters["perm_water"]
+        events = cfg.discover_events()
+        if scenario in events:
+            self._rain_paths = {
+                "rain7": [cfg.event_raster("rain7", scenario)],
+                "rain_sum": [cfg.event_raster("rain_sum", scenario)],
+            }
+            self._rain_reducer: str | None = None
+        elif scenario in {"median", "max"}:
+            self._rain_paths = {
+                kind: [cfg.event_raster(kind, event) for event in events]
+                for kind in ("rain7", "rain_sum")
+            }
+            self._rain_reducer = scenario
+        else:
+            raise ValueError(
+                f"Unknown scenario '{scenario}'. Use 'median', 'max', or one of: {events}"
+            )
 
-        with rasterio.open(cfg.reference_raster) as ds:
-            self.transform = ds.transform
-            self.crs = ds.crs
-            self.height, self.width = ds.height, ds.width
-            self.bounds = ds.bounds
+        reference = self._dataset(cfg.reference_raster)
+        self.transform = reference.transform
+        self.crs = reference.crs
+        self.height, self.width = reference.height, reference.width
+        self.bounds = reference.bounds
         self._to_raster = Transformer.from_crs("EPSG:4326", self.crs, always_xy=True)
         self._to_wgs84 = Transformer.from_crs(self.crs, "EPSG:4326", always_xy=True)
+
+    def _dataset(self, path: Path) -> rasterio.DatasetReader:
+        """Open a raster only when it is first needed, then reuse the handle."""
+        if path not in self._datasets:
+            self._datasets[path] = rasterio.open(path)
+        return self._datasets[path]
+
+    def _value_at(self, path: Path, row: int, col: int) -> float | None:
+        """Read one valid float32 cell without materialising a full raster."""
+        ds = self._dataset(path)
+        value = float(ds.read(1, window=Window(col, row, 1, 1), out_dtype="float32")[0, 0])
+        if not np.isfinite(value) or (ds.nodata is not None and value == ds.nodata):
+            return None
+        return value
+
+    def _rainfall_at(self, kind: str, row: int, col: int) -> float | None:
+        values = [self._value_at(path, row, col) for path in self._rain_paths[kind]]
+        finite = np.asarray([value for value in values if value is not None], dtype="float32")
+        if finite.size == 0:
+            return None
+        if self._rain_reducer == "median":
+            return float(np.median(finite))
+        if self._rain_reducer == "max":
+            return float(np.max(finite))
+        return float(finite[0])
+
+    def close(self) -> None:
+        """Close cached raster handles when FastAPI shuts down."""
+        for dataset in self._datasets.values():
+            dataset.close()
+        self._datasets.clear()
 
     # -- geometry -------------------------------------------------------
     def rowcol(self, lat: float, lon: float) -> tuple[int, int]:
@@ -158,16 +208,19 @@ class PointScorer:
         """Predictor values at a cell, or ``None`` where the cell is unusable."""
         if not self.in_bounds(row, col):
             return None
-        if not (self.dem_ok[row, col] and self.slope_ok[row, col] and self.built_ok[row, col]):
+        dem = self._value_at(self._static_paths["dem"], row, col)
+        slope = self._value_at(self._static_paths["slope"], row, col)
+        builtup = self._value_at(self._static_paths["builtup"], row, col)
+        if dem is None or slope is None or builtup is None:
             return None
-        r7 = self.rain7[row, col] if rain7 is None else float(rain7)
-        rs = self.rain_sum[row, col] if rain_sum is None else float(rain_sum)
-        if not (np.isfinite(r7) and np.isfinite(rs)):
+        r7 = self._rainfall_at("rain7", row, col) if rain7 is None else float(rain7)
+        rs = self._rainfall_at("rain_sum", row, col) if rain_sum is None else float(rain_sum)
+        if r7 is None or rs is None or not (np.isfinite(r7) and np.isfinite(rs)):
             return None
         return {
-            "dem": float(self.dem[row, col]),
-            "slope": float(self.slope[row, col]),
-            "builtup": float(self.builtup[row, col]),
+            "dem": dem,
+            "slope": slope,
+            "builtup": builtup,
             "rain7": float(r7),
             "rain_sum": float(rs),
         }
@@ -183,12 +236,13 @@ class PointScorer:
             return {"status": "no_data_at_location", "row": row, "col": col}
         X = np.array([[feats[f] for f in self.features]], dtype="float32")
         prob = float(self.model.predict_proba(X)[0, 1])
+        permanent_water = self._value_at(self._perm_path, row, col)
         return {
             "status": "ok",
             "row": row,
             "col": col,
             "probability": prob,
-            "permanent_water": bool(self.perm[row, col] > 0),
+            "permanent_water": bool(permanent_water is not None and permanent_water > 0),
             "features": feats,
         }
 
