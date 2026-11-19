@@ -58,7 +58,9 @@ jobs:
       # dependencies load. Start the real API and exercise its readiness route.
       - name: Start API image and check readiness
         run: |
-          docker run --detach --name nairobi-flood-api-ci --publish 8000:8000 nairobi-flood-api:ci
+          # Match Render's free-instance memory ceiling so a successful build
+          # cannot mask an out-of-memory failure at deployment time.
+          docker run --detach --memory 512m --memory-swap 512m --name nairobi-flood-api-ci --publish 8000:8000 nairobi-flood-api:ci
           for attempt in {1..45}; do
             if curl --fail --silent --show-error http://localhost:8000/health; then
               docker stop nairobi-flood-api-ci
