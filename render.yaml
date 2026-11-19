@@ -1,0 +1,40 @@
+# Render Blueprint for the public API and the Streamlit dashboard.
+#
+# Before creating this Blueprint, make the licensed prepared raster stack
+# available to the API build. The live API intentionally scores points from
+# those rasters and will not substitute a cached map when they are absent.
+# See README.md#render-deployment for the required deployment-data decision.
+
+services:
+  - type: web
+    name: nairobi-flood-api
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    # Render waits for the GitHub Actions checks defined in ci.yml before CD.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: PYTHONPATH
+        value: /app/src
+
+  - type: web
+    name: nairobi-flood-dashboard
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./Dockerfile.ui
+    dockerContext: .
+    healthCheckPath: /_stcore/health
+    # Render waits for the GitHub Actions checks defined in ci.yml before CD.
+    autoDeployTrigger: checksPass
+    envVars:
+      # Free Render web services cannot receive private-network requests.
+      # Use the API's Render-managed public URL rather than hard-coding it.
+      - key: FLOOD_API_URL
+        fromService:
+          type: web
+          name: nairobi-flood-api
+          envVarKey: RENDER_EXTERNAL_URL

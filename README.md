@@ -102,6 +102,25 @@ configuration, and both container builds on pushes and pull requests. The full
 raster integration tests run locally after placing the source rasters in
 `data/nairobi_flood_data/`; those raw files are intentionally excluded from Git.
 
+### Render deployment
+
+[`render.yaml`](render.yaml) defines two Docker web services in Frankfurt: the
+FastAPI model service and this repository's Streamlit dashboard. Render deploys only
+after the GitHub Actions checks pass (`autoDeployTrigger: checksPass`), so GitHub Actions
+provides CI and Render provides CD from `main`.
+
+The dashboard receives the API's Render-managed public URL as `FLOOD_API_URL`; no URL or
+credential is committed. Both services use Render's assigned `PORT` in deployment while
+preserving the local Compose ports (8000 and 8501).
+
+**Deployment data decision required.** The deployed API reads the 50 prepared GeoTIFFs
+in `data/nairobi_flood_data/` for every live point prediction. Those files are omitted
+from Git because their source terms must be respected. Before creating the Blueprint,
+make a licensed deployment copy available (for example, include the prepared derivatives
+with clear attribution after confirming redistribution is permitted, or download a
+permitted archive during the image build). Do not replace the raster lookup with the
+precomputed map: that would change the advertised API behaviour.
+
 ### 1. Install
 
 ```bash
