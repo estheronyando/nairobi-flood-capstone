@@ -35,10 +35,8 @@ jobs:
       - name: Check Python syntax
         run: python -m compileall -q src app scripts
 
-      # Raw GeoTIFFs are deliberately excluded from version control. These
-      # tests exercise the tracked model artefact and selection behaviour.
-      - name: Run model-contract tests
-        run: python -m pytest -q tests/test_models.py
+      - name: Run complete test suite
+        run: python -m pytest -q
 
   container-builds:
     name: Container build checks

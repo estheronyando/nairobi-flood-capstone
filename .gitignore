@@ -9,11 +9,9 @@ venv/
 # Notebooks
 .ipynb_checkpoints/
 
-# Raw rasters: 13 MB of binaries that never change. git stores a whole new
-# copy per change, so they are placed rather than committed - see
-# data/README.md. The trained model, model card, metric tables and figures
-# ARE committed, so a reviewer sees the results without rerunning first.
-data/nairobi_flood_data/
+# The prepared GeoTIFF stack is versioned so a public clone can reproduce the
+# API and Render deployment. Its source acknowledgements and reuse notes are
+# in data/README.md.
 outputs/tables/training_table.csv
 
 # OS

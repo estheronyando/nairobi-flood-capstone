@@ -97,10 +97,11 @@ The rest of this section is the same thing done by hand.
 
 ### Continuous integration
 
-GitHub Actions checks Python syntax, the tracked model-contract tests, Compose
-configuration, and both container builds on pushes and pull requests. The full
-raster integration tests run locally after placing the source rasters in
-`data/nairobi_flood_data/`; those raw files are intentionally excluded from Git.
+GitHub Actions runs the full test suite, validates Compose configuration, and builds both
+containers on pushes and pull requests. The prepared raster derivatives in
+`data/nairobi_flood_data/` are versioned with source acknowledgement in
+[`data/README.md`](data/README.md), so a clean clone exercises the same data contract as
+the deployed service.
 
 ### Render deployment
 
@@ -114,12 +115,10 @@ credential is committed. Both services use Render's assigned `PORT` in deploymen
 preserving the local Compose ports (8000 and 8501).
 
 **Deployment data decision required.** The deployed API reads the 50 prepared GeoTIFFs
-in `data/nairobi_flood_data/` for every live point prediction. Those files are omitted
-from Git because their source terms must be respected. Before creating the Blueprint,
-make a licensed deployment copy available (for example, include the prepared derivatives
-with clear attribution after confirming redistribution is permitted, or download a
-permitted archive during the image build). Do not replace the raster lookup with the
-precomputed map: that would change the advertised API behaviour.
+in `data/nairobi_flood_data/` for every live point prediction. The prepared derivatives
+are included with their source acknowledgement and reuse notes in
+[`data/README.md`](data/README.md). Do not replace the raster lookup with the precomputed
+map: that would change the advertised API behaviour.
 
 ### 1. Install
 
