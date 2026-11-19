@@ -12,9 +12,10 @@
 FROM python:3.13-slim
 
 # rasterio and pyproj ship manylinux wheels with GDAL/PROJ bundled, so no
-# system GDAL is needed; curl is here only for the container healthcheck.
+# system GDAL is needed. Rasterio's GDAL extension does dynamically require
+# libexpat from Debian; curl is used by the container healthcheck.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
+    && apt-get install -y --no-install-recommends curl libexpat1 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1 \

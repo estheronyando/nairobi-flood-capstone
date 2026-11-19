@@ -53,3 +53,19 @@ jobs:
 
       - name: Build dashboard image
         run: docker build --file Dockerfile.ui --tag nairobi-flood-ui:ci .
+
+      # A successful image build does not prove that native geospatial
+      # dependencies load. Start the real API and exercise its readiness route.
+      - name: Start API image and check readiness
+        run: |
+          docker run --detach --name nairobi-flood-api-ci --publish 8000:8000 nairobi-flood-api:ci
+          for attempt in {1..45}; do
+            if curl --fail --silent --show-error http://localhost:8000/health; then
+              docker stop nairobi-flood-api-ci
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs nairobi-flood-api-ci
+          docker rm --force nairobi-flood-api-ci
+          exit 1
