@@ -1,0 +1,21 @@
+# Minimal, CPU-only dependencies for the deployed FastAPI service.
+#
+# Training, figures, SHAP and tests remain in requirements.txt. The service only
+# loads the serialized XGBoost model and reads rasters, so shipping those heavy
+# development dependencies would exhaust a small free hosting instance.
+
+# --- geospatial ---
+rasterio==1.4.3
+pyproj==3.7.2
+
+# --- model serving ---
+scikit-learn==1.7.2
+xgboost-cpu==3.1.1
+joblib==1.5.2
+numpy==2.2.6
+PyYAML==6.0.3
+
+# --- HTTP service ---
+fastapi==0.121.1
+uvicorn[standard]==0.38.0
+pydantic==2.12.4

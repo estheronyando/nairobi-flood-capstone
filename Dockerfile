@@ -26,8 +26,10 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Dependencies first so edits to source do not invalidate the wheel layer.
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# The API image intentionally uses the CPU-only XGBoost distribution and omits
+# training/visualisation packages; Render's free instance has 512 MiB RAM.
+COPY requirements.api.txt .
+RUN pip install --no-cache-dir -r requirements.api.txt
 
 COPY config.yaml ./
 COPY src/ ./src/

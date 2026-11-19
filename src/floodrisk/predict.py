@@ -44,13 +44,23 @@ def build_scenario(cfg: Config, scenario: str = "median") -> tuple[np.ndarray, n
         )
 
     reducer = np.nanmedian if scenario == "median" else np.nanmax
-    r7 = np.stack([read_band(cfg.event_raster("rain7", e))[0] for e in events])
-    rs = np.stack([read_band(cfg.event_raster("rain_sum", e))[0] for e in events])
-    # Cells with no rainfall observation in any event reduce to NaN; that is
-    # expected at the grid edge and those cells are dropped by the valid mask.
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", message="All-NaN slice encountered")
-        return reducer(r7, axis=0), reducer(rs, axis=0)
+
+    def reduce_events(kind: str) -> np.ndarray:
+        """Reduce one 15-event stack, then release it before reading the next.
+
+        Loading both rainfall stacks together adds about 250 MiB at API startup.
+        The deployed service needs only their two reduced outputs, so processing
+        them sequentially preserves the calculation while keeping the free-tier
+        Render instance below its 512 MiB limit.
+        """
+        stack = np.stack([read_band(cfg.event_raster(kind, event))[0] for event in events])
+        # Cells with no rainfall observation in any event reduce to NaN; that is
+        # expected at the grid edge and those cells are dropped by the valid mask.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="All-NaN slice encountered")
+            return reducer(stack, axis=0)
+
+    return reduce_events("rain7"), reduce_events("rain_sum")
 
 
 def predict_surface(cfg: Config, model_artefact: dict, scenario: str | None = None) -> Path:
