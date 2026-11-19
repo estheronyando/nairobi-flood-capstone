@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Raw rasters: 13 MB of binaries that never change. git stores a whole new
+# copy per change, so they are placed rather than committed - see
+# data/README.md. The trained model, model card, metric tables and figures
+# ARE committed, so a reviewer sees the results without rerunning first.
+data/nairobi_flood_data/
+outputs/tables/training_table.csv
+
+# OS
+.DS_Store
+Thumbs.db

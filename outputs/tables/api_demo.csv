@@ -1,0 +1,9 @@
+location,lat,lon,status,probability,risk_band,dem,slope,builtup,rain7,rain_sum
+Nairobi CBD,-1.2921,36.8219,ok,0.0015,low,1661.0,2.073,1.0,91.806,176.73
+Mathare valley,-1.263,36.86,ok,0.1133,low,1617.0,4.141,1.0,82.446,181.915
+Kibera,-1.313,36.78,ok,0.0035,low,1753.0,2.622,1.0,84.664,196.654
+Embakasi / Nairobi R.,-1.319,36.925,ok,0.082,low,1615.0,4.141,0.0,74.139,168.377
+Kasarani,-1.227,36.887,ok,0.0316,low,1608.0,2.93,0.0,79.739,201.433
+Karen,-1.335,36.71,ok,0.0535,low,1860.0,4.628,0.0,98.503,229.314
+"Athi plains, south edge",-1.3733,36.8569,ok,0.1062,low,1624.0,2.78,0.0,81.212,167.119
+Mombasa (outside grid),-4.0435,39.6682,outside_extent,,,,,,,

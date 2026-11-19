@@ -1,0 +1,112 @@
+{
+  "model_name": "xgboost",
+  "features": [
+    "dem",
+    "slope",
+    "builtup",
+    "rain7",
+    "rain_sum"
+  ],
+  "threshold": 0.5,
+  "train_events": [
+    "E01_2016_04",
+    "E02_2016_04b",
+    "E03_2018_03",
+    "E04_2019_12",
+    "E05_2020_04",
+    "E06_2021_05a",
+    "E07_2021_05b",
+    "E08_2021_11",
+    "E09_2023_03",
+    "E10_2023_11",
+    "E11_2024_03"
+  ],
+  "test_events": [
+    "E12_2024_04a",
+    "E13_2024_04b",
+    "E14_2025_04",
+    "E15_2025_05"
+  ],
+  "metrics": {
+    "accuracy": 0.8069,
+    "precision": 0.8522,
+    "recall": 0.7425,
+    "f1": 0.7936,
+    "roc_auc": 0.9058,
+    "brier": 0.1304,
+    "tp": 594.0,
+    "fp": 103.0,
+    "fn": 206.0,
+    "tn": 697.0,
+    "fit_seconds": 0.14
+  },
+  "selection_note": "Selected xgboost (roc_auc=0.9058) over stacking_ensemble (0.9068): within the 0.005 tolerance and simpler. Tied set: ['stacking_ensemble', 'xgboost'].",
+  "seed": 42,
+  "all_models": {
+    "stacking_ensemble": {
+      "accuracy": 0.8062,
+      "precision": 0.8614,
+      "recall": 0.73,
+      "f1": 0.7903,
+      "roc_auc": 0.9068,
+      "brier": 0.1317,
+      "tp": 584,
+      "fp": 94,
+      "fn": 216,
+      "tn": 706,
+      "fit_seconds": 5.63
+    },
+    "xgboost": {
+      "accuracy": 0.8069,
+      "precision": 0.8522,
+      "recall": 0.7425,
+      "f1": 0.7936,
+      "roc_auc": 0.9058,
+      "brier": 0.1304,
+      "tp": 594,
+      "fp": 103,
+      "fn": 206,
+      "tn": 697,
+      "fit_seconds": 0.14
+    },
+    "random_forest": {
+      "accuracy": 0.7931,
+      "precision": 0.8558,
+      "recall": 0.705,
+      "f1": 0.7731,
+      "roc_auc": 0.8999,
+      "brier": 0.1313,
+      "tp": 564,
+      "fp": 95,
+      "fn": 236,
+      "tn": 705,
+      "fit_seconds": 0.73
+    },
+    "average_ensemble": {
+      "accuracy": 0.7988,
+      "precision": 0.8444,
+      "recall": 0.7325,
+      "f1": 0.7845,
+      "roc_auc": 0.894,
+      "brier": 0.1341,
+      "tp": 586,
+      "fp": 108,
+      "fn": 214,
+      "tn": 692,
+      "fit_seconds": 0.83
+    },
+    "logistic_regression": {
+      "accuracy": 0.6625,
+      "precision": 0.6395,
+      "recall": 0.745,
+      "f1": 0.6882,
+      "roc_auc": 0.7899,
+      "brier": 0.1931,
+      "tp": 596,
+      "fp": 336,
+      "fn": 204,
+      "tn": 464,
+      "fit_seconds": 0.01
+    }
+  }
+}

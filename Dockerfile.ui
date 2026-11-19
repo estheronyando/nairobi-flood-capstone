@@ -1,0 +1,28 @@
+# Streamlit front end for the flood-susceptibility API.
+#
+# Deliberately separate from the API image: this container carries no model,
+# no rasters and no scikit-learn. It renders whatever /predict returns, so it
+# cannot produce a number of its own even by accident.
+
+FROM python:3.13-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+COPY app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app/ ./app/
+
+RUN useradd --create-home --uid 1000 flood && chown -R flood:flood /app
+USER flood
+
+EXPOSE 8501
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD curl -fsS http://localhost:8501/_stcore/health || exit 1
+
+CMD ["streamlit", "run", "app/streamlit_app.py", \
+     "--server.address=0.0.0.0", "--server.port=8501", "--server.headless=true"]

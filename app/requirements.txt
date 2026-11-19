@@ -1,0 +1,4 @@
+# Front end only. The model never loads here: this app renders what the API returns.
+streamlit==1.52.2
+httpx==0.28.1
+pandas==2.3.3

@@ -1,0 +1,26 @@
+# --- geospatial ---
+rasterio==1.4.3
+pyproj==3.7.2
+
+# --- modelling ---
+scikit-learn==1.7.2
+xgboost==3.1.1
+shap==0.50.0
+joblib==1.5.2
+
+# --- data ---
+numpy==2.2.6
+pandas==2.3.3
+PyYAML==6.0.3
+
+# --- figures ---
+matplotlib==3.10.7
+
+# --- service ---
+fastapi==0.121.1
+uvicorn[standard]==0.38.0
+pydantic==2.12.4
+
+# --- tests ---
+pytest==9.0.1
+httpx==0.28.1

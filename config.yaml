@@ -1,0 +1,91 @@
+# Configuration for the Nairobi flood-susceptibility pipeline.
+# Every path is relative to the repository root unless absolute.
+
+paths:
+  raw_data: data/nairobi_flood_data      # the 50 co-registered GeoTIFFs
+  models: models
+  outputs: outputs
+  figures: outputs/figures
+  tables: outputs/tables
+
+raster:
+  # The DEM defines the reference grid. Every other layer must match it
+  # exactly; the audit step fails loudly rather than silently resampling.
+  reference: dem_srtm_30m_nairobi.tif
+  static:
+    dem: dem_srtm_30m_nairobi.tif
+    slope: slope_deg_30m_nairobi.tif
+    builtup: builtup_mask_worldcover_30m_nairobi.tif
+  # Read by the audit and used to mask the prediction surface, but not
+  # offered to the model as predictors (see report, technique justification).
+  auxiliary:
+    landcover: landcover_worldcover_30m_nairobi.tif
+    perm_water: perm_water_mask_occ30_nairobi.tif
+  event_patterns:
+    label: "label_event_water_{event}.tif"
+    rain7: "rain7_{event}.tif"
+    rain_sum: "rain_sum_{event}.tif"
+
+features:
+  # Order is fixed and reused for training, evaluation and raster-wide
+  # inference. Changing it invalidates the serialized model.
+  columns: [dem, slope, builtup, rain7, rain_sum]
+
+sampling:
+  per_event_positive: 200
+  per_event_negative: 200
+  # Non-flood pixels are drawn from outside the event's flood mask and
+  # outside permanent water, so the negative class is dry land rather
+  # than rivers and dams the model would separate trivially.
+  exclude_permanent_water: true
+  seed: 42
+
+split:
+  # Events, not pixels. Pixels from one flood event are spatially
+  # autocorrelated; splitting them at random leaks neighbours across the
+  # boundary and inflates every score.
+  test_events: [E12_2024_04a, E13_2024_04b, E14_2025_04, E15_2025_05]
+
+models:
+  logistic_regression:
+    C: 0.5
+    max_iter: 2000
+  random_forest:
+    n_estimators: 300
+    min_samples_split: 2
+    min_samples_leaf: 1
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.1
+    eval_metric: logloss
+
+selection:
+  # Picking the raw argmax rewards noise. Instead: take the best score,
+  # keep every model within `tolerance` of it, and among those deploy the
+  # simplest. A 0.001 AUC gain does not justify shipping a stacking
+  # ensemble that is an order of magnitude slower to fit and harder to
+  # explain to a regulator.
+  metric: roc_auc
+  tolerance: 0.005
+  simplicity_order:
+    - logistic_regression
+    - random_forest
+    - xgboost
+    - average_ensemble
+    - stacking_ensemble
+
+evaluation:
+  threshold: 0.5
+  calibration_bins: 10
+  shap_sample: 2000
+
+prediction:
+  # The rainfall scenario the baseline susceptibility surface is built on.
+  # "median" takes the per-pixel median across all 15 events, i.e. a
+  # typical rather than extreme storm.
+  scenario: median
+  chunk_rows: 100
+  output_raster: outputs/flood_susceptibility_nairobi_30m.tif
+
+seed: 42

@@ -1,0 +1,55 @@
+services:
+  api:
+    build: .
+    image: nairobi-flood-api:1.0.0
+    container_name: nairobi-flood-api
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONPATH=/app/src
+    # The image is self-contained. These mounts let you point the service at
+    # a freshly retrained model or new rasters without rebuilding: uncomment,
+    # rerun the pipeline on the host, and restart the container.
+    # volumes:
+    #   - ./data:/app/data:ro
+    #   - ./models:/app/models:ro
+    #   - ./outputs:/app/outputs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 40s
+      retries: 3
+    restart: unless-stopped
+
+  # Optional UI. It holds no model and computes nothing: every number it shows
+  # comes from an api call. Start it with:  docker compose --profile ui up --build
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    image: nairobi-flood-ui:1.0.0
+    container_name: nairobi-flood-ui
+    profiles: ["ui"]
+    ports:
+      - "8501:8501"
+    environment:
+      - FLOOD_API_URL=http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # One-shot profile that reruns the whole pipeline inside the container and
+  # writes artifacts back to the host:
+  #     docker compose --profile train run --rm trainer
+  trainer:
+    build: .
+    image: nairobi-flood-api:1.0.0
+    profiles: ["train"]
+    environment:
+      - PYTHONPATH=/app/src
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models
+      - ./outputs:/app/outputs
+    command: ["python", "scripts/run_pipeline.py"]
